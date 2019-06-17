@@ -1,0 +1,12 @@
+# DS_Store
+.DS_Store/
+.DS_Store
+
+# idea folders
+.idea/
+
+# Python bytecode
+*.pyc
+
+# Jupyter checkpoints
+*.ipynb_checkpoints/

@@ -188,11 +188,14 @@ def init_statistics():
 
     # total of invalid samples expressed by reasons
     total_invalid_samples = {}
+    total_valid_samples = {}
     total_invalid_samples['not able to open file'] = []
     total_invalid_samples['DNS packets'] = {}
     total_invalid_samples['non ip packets'] = {}
     total_invalid_samples['non tp packets'] = {}
-    return total_valid_samples_app, total_valid_samples_tclass, total_invalid_samples
+    total_valid_samples['total packets in pcap'] = {}
+    total_valid_samples['total valid packets in pcap'] = {}
+    return total_valid_samples_app, total_valid_samples_tclass, total_invalid_samples, total_valid_samples
 
 def preprocessing(in_dir, out_dir="./"):
     """
@@ -207,7 +210,7 @@ def preprocessing(in_dir, out_dir="./"):
     """
 
     # total of valid samples divided per category.
-    total_valid_samples_app, total_valid_samples_tclass, total_invalid_samples = init_statistics()
+    total_valid_samples_app, total_valid_samples_tclass, total_invalid_samples, total_valid_samples = init_statistics()
 
     for root, dir, files in os.walk(in_dir):
         for file in files:
@@ -234,6 +237,8 @@ def preprocessing(in_dir, out_dir="./"):
                 dns_counter = 0
                 non_ip = 0
                 non_tp = 0
+                processed_pakets = 0
+                valid = 0
 
                 # Get labels
                 label_non_tor , label_tor = get_label_from_file_path(path_file, out_dir)
@@ -246,11 +251,17 @@ def preprocessing(in_dir, out_dir="./"):
 
                     # Unpack the Ethernet frame (mac src/dst, ethertype)
                     # Data-link header removal (a)
+                    processed_pakets += 1
+
                     eth = dpkt.ethernet.Ethernet(packet)
 
                     # Process IP packet
                     if eth.type not in ETHERNET_TYPES.keys():
-                        ip = dpkt.ip.IP(packet)
+                        try:
+                            ip = dpkt.ip.IP(packet)
+                        except:
+                            continue
+                            # todo: add to statistics?
                     else:
                         ip = eth.data
 
@@ -274,6 +285,7 @@ def preprocessing(in_dir, out_dir="./"):
 
                         # Count of valid samples
                         if label_non_tor:
+                            valid +=1
                             if label_non_tor[3] != 0:
                                 # vpn traffic
                                 total_valid_samples_tclass['vpn:' + label_non_tor[2]] += 1
@@ -317,6 +329,9 @@ def preprocessing(in_dir, out_dir="./"):
                 total_invalid_samples['DNS packets'][path_file] = dns_counter
                 total_invalid_samples['non ip packets'][path_file] = non_ip
                 total_invalid_samples['non tp packets'][path_file] = non_tp
+                total_valid_samples['total packets in pcap'][path_file] = processed_pakets
+                total_valid_samples['total valid packets in pcap'][path_file] = valid
+
     with open(os.path.join(out_dir, 'results.txt'), 'a') as text_file:
         text_file.write('Total valid samples per app:')
         text_file.write(json.dumps(total_valid_samples_app))

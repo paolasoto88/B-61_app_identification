@@ -342,4 +342,6 @@ def preprocessing(in_dir, out_dir="./"):
         text_file.write('Total invalid samples:')
         text_file.write(json.dumps(total_invalid_samples))
         text_file.write("\n")
+        text_file.write('Total valid samples per pcap:')
+        text_file.write(json.dumps(total_valid_samples))
 

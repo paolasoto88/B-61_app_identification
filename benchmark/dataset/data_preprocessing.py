@@ -2,8 +2,10 @@ import dpkt
 import os
 import numpy as np
 import struct
-from benchmark.const import TOR_TRAFFIC_LABELS, TRAFFIC_CLASES, APP_IDENTIFICATION_LABELS, TRAFFIC_CLASES_LABELS
+from benchmark.const import TOR_TRAFFIC_LABELS, TRAFFIC_CLASES, APP_IDENTIFICATION_LABELS, TRAFFIC_CLASES_LABELS, \
+    ETHERNET_TYPES
 import csv
+import json
 
 
 def mask_ip_addrr(byte_array):
@@ -27,14 +29,6 @@ def get_label_from_file_path(file_path, out_dir="./out_dir/"):
     :param out_dir:
     :return:
     """
-    # todo: llevar los labels a un archivo de texto tambien, puede ser un csv
-    # todo: crear dos archivos csv uno para tor y otro para las aplicaciones comunes
-    # todo: path[str]/appname[str]/trafficClass[str]/vpn[bool]  --> normal apps
-    # todo: path[str]/appname[str] ---> apps within tor
-
-    #todo: crear directorios para cada una de los labels si no han sido creados aun, el archivo csv sera guardado en el root del out dir
-
-
     fn = file_path.split('/')[-1].rstrip().lower()
     label_non_tor = []
     label_tor = []
@@ -128,19 +122,17 @@ def get_label_from_file_path(file_path, out_dir="./out_dir/"):
 
     return label_non_tor, label_tor
 
-def process_ip(eth):
+def process_ip(ip):
     # Now unpack the data within the Ethernet frame (the IP packet)
     # Pulling out src, dst, length, fragment info, TTL, and Protocol
     # obtain only IP packets, remove ethernet header as not needed.
-    ip = eth.data
     # prints out the result of the processed ip packet
     outcome = 'ip packet successfully processed'
 
     # Make sure the Ethernet frame contains an IPv4 packet, filter ARP packets
     if not isinstance(ip, dpkt.ip.IP):
         outcome = 'non IP packet type'
-        ip_packet = struct.pack('>B', 0)
-        ip = []
+        ip_packet = b''
     else:
         # Extract information about IP packet
         ip_packet = struct.pack('>B', ip._v_hl)
@@ -153,7 +145,7 @@ def process_ip(eth):
         ip_packet += struct.pack('>H', ip.sum)
         ip_packet += mask_ip_addrr(ip.src)
         ip_packet += mask_ip_addrr(ip.dst)
-    return outcome, ip_packet, ip
+    return outcome, ip_packet
 
 def process_tp(tp):
     tp_segment = struct.pack('>H',0)
@@ -211,7 +203,7 @@ def preprocessing(in_dir, out_dir="./"):
     :param in_dir: str: input directory containing pcap files
     :param out_dir: str: output directory where the preprocess data is going to be stored.
 
-    :return: statistics  # TODO: add statistics, e.g., number of packets per category, number of invalid packets, number of DNS packets, etc..
+    :return:
     """
 
     # total of valid samples divided per category.
@@ -220,6 +212,7 @@ def preprocessing(in_dir, out_dir="./"):
     for root, dir, files in os.walk(in_dir):
         for file in files:
             # exclude other kind of files
+            print('Processing file: {}'.format(file))
             if '.pcap' in file:
                 path_file = os.path.join(in_dir, file)
                 testcap = open(path_file, 'rb')
@@ -236,8 +229,8 @@ def preprocessing(in_dir, out_dir="./"):
                         total_invalid_samples['not able to open file'].append(path_file)
                     continue
 
-                mod_packet_len = []
-                mod_raw_packets = []
+
+                len_mod_packet = []
                 dns_counter = 0
                 non_ip = 0
                 non_tp = 0
@@ -247,18 +240,26 @@ def preprocessing(in_dir, out_dir="./"):
 
                 # Process every pcap to obtain the raw packets.
                 # For each packet in the pcap process the contents
-                for timestamp, buf in pcap_file:
+                for timestamp, packet in pcap_file:
                     # Basically we have to transfer the data from the original packet to another structure
                     # that allows pre-processing (Mask IP, remove optional header in TCP, etc).
 
                     # Unpack the Ethernet frame (mac src/dst, ethertype)
                     # Data-link header removal (a)
+                    eth = dpkt.ethernet.Ethernet(packet)
+
                     # Process IP packet
-                    out, ip_packet, ip = process_ip(dpkt.ethernet.Ethernet(buf))
+                    if eth.type not in ETHERNET_TYPES.keys():
+                        ip = dpkt.ip.IP(packet)
+                    else:
+                        ip = eth.data
+
+                    out, ip_packet = process_ip(ip)
                     if out == 'non IP packet type':
-                        non_ip +=1
+                        non_ip += 1
                         continue
 
+                    # Process transport packets
                     tp = ip.data
                     # Discard DNS segments (c)
                     if isinstance(tp, dpkt.udp.UDP):
@@ -273,28 +274,31 @@ def preprocessing(in_dir, out_dir="./"):
 
                         # Count of valid samples
                         if label_non_tor:
-                            total_valid_samples_app[label_non_tor[1]] += 1
                             if label_non_tor[3] != 0:
                                 # vpn traffic
                                 total_valid_samples_tclass['vpn:' + label_non_tor[2]] += 1
                             else:
+                                total_valid_samples_app[label_non_tor[1]] += 1
                                 total_valid_samples_tclass[label_non_tor[2]] += 1
 
 
                         # concatenate ip and transport
                         mod_packet = ip_packet + tp_segment
 
-                        # convert to integer, then normalize (d, f)
-                        # todo: normalize in the pre-processing for training
+                        # convert to integer (d)
+                        # todo: normalize in the pre-processing for training, otherwise the file size is too big
                         mod_packet = np.frombuffer(mod_packet, dtype=np.uint8)
-                        # print('length from buffer: {}'.format(len(mod_packet)))
-                        # print('==============================================')
-                        # TODO: inject zeros if less than 1500 bytes, truncate if more then 1500 bytes
-                        #mod_raw_packets.append(mod_packet)
-                        #mod_packet_len.append(len(mod_packet))
-                        # print('length modified packet: {}'.format(len(mod_packet)))
 
-                        # print('==============================================')
+                        len_mod_packet.append(len(mod_packet))
+
+                        if len(mod_packet) >= 1500:
+                            #truncate
+                            mod_packet = mod_packet[:1500]
+                        else:
+                            # inject zeros
+                            dif = 1500 - len(mod_packet)
+                            mod_packet = np.append(mod_packet, np.zeros(dif))
+
 
                         # Dump info to csv
                         # Output directory
@@ -307,8 +311,20 @@ def preprocessing(in_dir, out_dir="./"):
                             csv_writer.writerow(mod_packet)
                     else:
                         non_tp += 1
-
+                with open(os.path.join(out_dir, 'results.txt'), 'a') as text_file:
+                    text_file.write(str(len_mod_packet))
+                    text_file.write("\n")
                 total_invalid_samples['DNS packets'][path_file] = dns_counter
                 total_invalid_samples['non ip packets'][path_file] = non_ip
                 total_invalid_samples['non tp packets'][path_file] = non_tp
-    print(total_valid_samples_tclass, total_valid_samples_app, total_invalid_samples)
+    with open(os.path.join(out_dir, 'results.txt'), 'a') as text_file:
+        text_file.write('Total valid samples per app:')
+        text_file.write(json.dumps(total_valid_samples_app))
+        text_file.write("\n")
+        text_file.write('Total valid samples per class:')
+        text_file.write(json.dumps(total_valid_samples_tclass))
+        text_file.write("\n")
+        text_file.write('Total invalid samples:')
+        text_file.write(json.dumps(total_invalid_samples))
+        text_file.write("\n")
+

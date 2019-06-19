@@ -1,6 +1,6 @@
 # DS_Store
 .DS_Store/
-.DS_Store
+*.DS_Store
 
 # idea folders
 .idea/
@@ -10,3 +10,7 @@
 
 # Jupyter checkpoints
 *.ipynb_checkpoints/
+
+
+# pycache
+*__pycache__

@@ -1,11 +1,12 @@
 import dpkt
 import os
-import numpy as np
 import struct
-from benchmark.const import TOR_TRAFFIC_LABELS, TRAFFIC_CLASES, APP_IDENTIFICATION_LABELS, TRAFFIC_CLASES_LABELS, \
-    ETHERNET_TYPES
 import csv
 import json
+import numpy as np
+from benchmark.const import TOR_TRAFFIC_LABELS, TRAFFIC_CLASES, APP_IDENTIFICATION_LABELS, TRAFFIC_CLASES_LABELS, \
+    ETHERNET_TYPES
+
 
 
 def mask_ip_addrr(byte_array):
@@ -19,108 +20,44 @@ def mask_ip_addrr(byte_array):
         shuffled += struct.pack('>B', arr[i])
     return shuffled
 
-def get_label_from_file_path(file_path, out_dir="./out_dir/"):
+def get_label_from_file_path(file_path):
     """
-    Creates the labels for the pcap file ...
-    path[str]/appname[str]/trafficClass[str]/vpn[bool]  --> normal apps
-    path[str]/appname[str] ---> apps within tor
+    Creates the labels for the processed pcap file ...
+    the labels are in the filename of the processed file
+    appname[str] | trafficClass[str] | vpn[bool]  --> normal apps
+    tor[str]| n/a[str] | 0 | extra ---> apps within tor where Extra = [google, facebook, etc]
 
     :param file_path:
-    :param out_dir:
     :return:
     """
     fn = file_path.split('/')[-1].rstrip().lower()
-    label_non_tor = []
-    label_tor = []
-
     if 'tor' in fn and 'torrent' not in fn:
-        # create output dir if it's not created yet
-        app_dir = os.path.join(out_dir, 'tor')
-
-        # create non tor labels
-        # path
-        label_non_tor.append(app_dir)
-        # appname
-        label_non_tor.append('tor')
-        # trafficClass
-        label_non_tor.append('n/a')
-        # vpn traffic?
-        label_non_tor.append(0)
+        filename = 'tor_n/a_0_'
         for appname in TOR_TRAFFIC_LABELS:
             if appname in fn:
-                tor_app_dir = os.path.join(app_dir, appname)
-                # create folder if it's not created yet
-                if not os.path.exists(tor_app_dir):
-                    os.makedirs(tor_app_dir)
-                tor_app_dir = os.path.join(tor_app_dir, 'packets.csv')
-                label_non_tor[0] = tor_app_dir
-                # create tor labels
-                label_tor.append(tor_app_dir)
-                label_tor.append(appname)
+                filename += appname
                 break
-
-    elif 'vpn' in fn:
-        app_dir = os.path.join(out_dir, 'vpn')
-        # create non tor labels
-        # path
-        label_non_tor.append(app_dir)
-        for appname in APP_IDENTIFICATION_LABELS:
-            if appname in fn:
-                label_non_tor.append(appname)
-                for tclass, ac in TRAFFIC_CLASES.items():
-                    if tclass in fn:
-                        label_non_tor.append(tclass)
-                        break
-                    elif appname in ac:
-                        # Can do this as the apps without class in the dataset belong to only one class
-                        # in TRAFFIC_CLASSES.
-                        label_non_tor.append(tclass)
-                        break
-                # vpn traffic?
-                label_non_tor.append(1)
-                # create output dir if it's not created yet
-                app_dir = os.path.join(app_dir, label_non_tor[2])
-                if not os.path.exists(app_dir):
-                    os.makedirs(app_dir)
-                app_dir = os.path.join(app_dir, 'packets.csv')
-                label_non_tor[0] = app_dir
-
     else:
+        filename = str()
+        # identify app
         for appname in APP_IDENTIFICATION_LABELS:
             if appname in fn:
-                # create output dir if it's not created yet
-                app_dir = os.path.join(out_dir, appname)
-                if not os.path.exists(app_dir):
-                    os.makedirs(app_dir)
-                # create non tor labels
-                # path
-                app_dir = os.path.join(app_dir, 'packets.csv')
-                label_non_tor.append(app_dir)
-                label_non_tor.append(appname)
-                for tclass, ac in TRAFFIC_CLASES.items():
-                    if tclass in fn:
-                        label_non_tor.append(tclass)
-                        break
-                    elif appname in ac:
-                        # Can do this as the apps without class in the dataset belong to only one class
-                        # in TRAFFIC_CLASSES.
-                        label_non_tor.append(tclass)
-                        break
-                # vpn traffic?
-                label_non_tor.append(0)
-    tor_info = os.path.join(out_dir, 'tor_filenames.csv')
-    non_tor_info = os.path.join(out_dir, 'non_tor_filenames.csv')
+                filename += appname + '_'
+                break
+        #identify traffic class
+        for tclass in TRAFFIC_CLASES_LABELS:
+            if tclass in fn:
+                filename += tclass + '_'
+                break
+        if 'vpn' in fn:
+            # add VPN traffic
+            filename += str(1)
+        else:
+            # add non VPN traffic
+            filename += str(0)
+    filename += '.csv'
 
-    if label_tor:
-        with open(tor_info, 'a') as csv_file:
-            csv_writer = csv.writer(csv_file, delimiter=',')
-            csv_writer.writerow(label_tor)
-    if label_non_tor:
-        with open(non_tor_info, 'a') as csv_file:
-            csv_writer = csv.writer(csv_file, delimiter=',')
-            csv_writer.writerow(label_non_tor)
-
-    return label_non_tor, label_tor
+    return filename
 
 def process_ip(ip):
     # Now unpack the data within the Ethernet frame (the IP packet)
@@ -200,6 +137,7 @@ def init_statistics():
 def preprocessing(in_dir, out_dir="./"):
     """
     Processes an input directory containing pcap files and store the extracted information in out_dir
+    This is the first step, prepare data to be injected in the data pipeline for data training.
 
     Parameters:
     -----------
@@ -241,7 +179,7 @@ def preprocessing(in_dir, out_dir="./"):
                 valid = 0
 
                 # Get labels
-                label_non_tor , label_tor = get_label_from_file_path(path_file, out_dir)
+                filename = get_label_from_file_path(path_file)
 
                 # Process every pcap to obtain the raw packets.
                 # For each packet in the pcap process the contents
@@ -283,17 +221,6 @@ def preprocessing(in_dir, out_dir="./"):
 
                     if out == 'tp packet successfully processed':
 
-                        # Count of valid samples
-                        if label_non_tor:
-                            valid +=1
-                            if label_non_tor[3] != 0:
-                                # vpn traffic
-                                total_valid_samples_tclass['vpn:' + label_non_tor[2]] += 1
-                            else:
-                                total_valid_samples_app[label_non_tor[1]] += 1
-                                total_valid_samples_tclass[label_non_tor[2]] += 1
-
-
                         # concatenate ip and transport
                         mod_packet = ip_packet + tp_segment
 
@@ -313,17 +240,25 @@ def preprocessing(in_dir, out_dir="./"):
 
 
                         # Dump info to csv
+                        # Count of valid samples
+                        valid += 1
+                        labels = filename.split('.')[0].split('_')
+                        if labels[-1] == 1:
+                            # vpn traffic
+                            total_valid_samples_tclass['vpn:' + labels[1]] += 1
+                        else:
+                            total_valid_samples_app[labels[0]] += 1
+                            total_valid_samples_tclass[labels[1]] += 1
                         # Output directory
-                        category_out_dir = label_non_tor[0]
+                        category_out_dir = os.path.join(out_dir,filename)
 
                         # Store raw packets
-                        #output_fn = 'packets.csv'
                         with open(category_out_dir, 'a') as csv_file:
                             csv_writer = csv.writer(csv_file, delimiter=',')
                             csv_writer.writerow(mod_packet)
                     else:
                         non_tp += 1
-                with open(os.path.join(out_dir, 'results.txt'), 'a') as text_file:
+                with open(os.path.join(out_dir, 'results_lengths_unprocessed.txt'), 'a') as text_file:
                     text_file.write(str(len_mod_packet))
                     text_file.write("\n")
                 total_invalid_samples['DNS packets'][path_file] = dns_counter

@@ -1,5 +1,5 @@
 import argparse
-from benchmark.dataset.data_preprocessing import preprocessing
+from benchmark.dataset.data_preparation import preprocessing
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -13,7 +13,6 @@ if __name__ == "__main__":
                         help="Folder to sve the preprocessed files")
 
 
-    # TODO: add more arguments, for example task, app id or traffic classification
     args = parser.parse_args()
     root_pcap_files = args.pcapfiles
     out_dir = args.outputdir

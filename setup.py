@@ -13,5 +13,5 @@ setup(
                       'matplotlib>=2.1.2',
                       'scikit-image>=0.14.0',
                       'dpkt'],
-    scripts=['bin/benchmark_train.py']
+    scripts=['bin/benchmark_prepare.py']
 )

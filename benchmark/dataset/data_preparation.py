@@ -3,6 +3,7 @@ import os
 import struct
 import csv
 import json
+import time
 import numpy as np
 from benchmark.const import TOR_TRAFFIC_LABELS, TRAFFIC_CLASES, APP_IDENTIFICATION_LABELS, TRAFFIC_CLASES_LABELS, \
     ETHERNET_TYPES
@@ -32,23 +33,33 @@ def get_label_from_file_path(file_path):
     """
     fn = file_path.split('/')[-1].rstrip().lower()
     if 'tor' in fn and 'torrent' not in fn:
-        filename = 'tor_n/a_0_'
+        filename = 'tor_tor_0_'
         for appname in TOR_TRAFFIC_LABELS:
             if appname in fn:
                 filename += appname
                 break
     else:
         filename = str()
+        tclass_flag = False
         # identify app
         for appname in APP_IDENTIFICATION_LABELS:
             if appname in fn:
                 filename += appname + '_'
                 break
         #identify traffic class
-        for tclass in TRAFFIC_CLASES_LABELS:
+        for tclass in TRAFFIC_CLASES.keys():
             if tclass in fn:
                 filename += tclass + '_'
+                tclass_flag = True
                 break
+        if not tclass_flag:
+            for tc, aclass in TRAFFIC_CLASES.items():
+                if not tclass_flag:
+                    for ac in aclass:
+                        if ac in fn:
+                            filename += tc + '_'
+                            tclass_flag = True
+                            break
         if 'vpn' in fn:
             # add VPN traffic
             filename += str(1)
@@ -121,7 +132,7 @@ def init_statistics():
         total_valid_samples_tclass[label] = 0
         total_valid_samples_tclass['vpn:' + label] = 0
     # tor traffic
-    total_valid_samples_tclass['n/a'] = 0
+    total_valid_samples_tclass['tor'] = 0
 
     # total of invalid samples expressed by reasons
     total_invalid_samples = {}
@@ -146,6 +157,9 @@ def preprocessing(in_dir, out_dir="./"):
 
     :return:
     """
+    start = time.time()
+
+    os.makedirs(out_dir, exist_ok=True)
 
     # total of valid samples divided per category.
     total_valid_samples_app, total_valid_samples_tclass, total_invalid_samples, total_valid_samples = init_statistics()
@@ -183,6 +197,7 @@ def preprocessing(in_dir, out_dir="./"):
 
                 # Process every pcap to obtain the raw packets.
                 # For each packet in the pcap process the contents
+
                 for timestamp, packet in pcap_file:
                     # Basically we have to transfer the data from the original packet to another structure
                     # that allows pre-processing (Mask IP, remove optional header in TCP, etc).
@@ -250,7 +265,7 @@ def preprocessing(in_dir, out_dir="./"):
                             total_valid_samples_app[labels[0]] += 1
                             total_valid_samples_tclass[labels[1]] += 1
                         # Output directory
-                        category_out_dir = os.path.join(out_dir,filename)
+                        category_out_dir = os.path.join(out_dir, filename)
 
                         # Store raw packets
                         with open(category_out_dir, 'a') as csv_file:
@@ -258,6 +273,7 @@ def preprocessing(in_dir, out_dir="./"):
                             csv_writer.writerow(mod_packet)
                     else:
                         non_tp += 1
+
                 with open(os.path.join(out_dir, 'results_lengths_unprocessed.txt'), 'a') as text_file:
                     text_file.write(str(len_mod_packet))
                     text_file.write("\n")
@@ -280,3 +296,5 @@ def preprocessing(in_dir, out_dir="./"):
         text_file.write('Total valid samples per pcap:')
         text_file.write(json.dumps(total_valid_samples))
 
+    end = time.time()
+    print('Extract data took: {}'.format(end - start))

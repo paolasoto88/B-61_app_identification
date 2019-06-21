@@ -258,7 +258,7 @@ def preprocessing(in_dir, out_dir="./"):
                         # Count of valid samples
                         valid += 1
                         labels = filename.split('.')[0].split('_')
-                        if labels[-1] == 1:
+                        if labels[-1] == '1':
                             # vpn traffic
                             total_valid_samples_tclass['vpn:' + labels[1]] += 1
                         else:

@@ -9,8 +9,6 @@ def down_sample(input_dir, output_dir, task):
     # todo: generate labels in this step???
     # todo: downsampling is different depending on the task to be done what is coded right now is the application identification task
     start = time.time()
-
-
     os.makedirs(output_dir, exist_ok=True)
 
     for root, directories, files in os.walk(input_dir):
@@ -27,7 +25,7 @@ def down_sample(input_dir, output_dir, task):
                             result = json.loads(line.rstrip().split('Total valid samples per app:')[1])
                             num_valid_packets = np.asarray(list(result.values()))
                             minimum = np.min(num_valid_packets[np.nonzero(num_valid_packets)])
-            if file == 'packets.csv':
+            if file.endswith('.csv'):
                 # read the info of the file, load it in memory, [[packet1], [packet2], ...]
                 with open (os.path.join(root, file)) as csv_file:
                     csv_reader = csv.reader(csv_file, delimiter=',')

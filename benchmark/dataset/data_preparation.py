@@ -160,6 +160,8 @@ def preprocessing(in_dir, out_dir="./"):
     start = time.time()
 
     os.makedirs(out_dir, exist_ok=True)
+    packets_folder = os.path.join(out_dir, 'raw_packets')
+    os.makedirs(packets_folder, exist_ok=True)
 
     # total of valid samples divided per category.
     total_valid_samples_app, total_valid_samples_tclass, total_invalid_samples, total_valid_samples = init_statistics()
@@ -265,7 +267,7 @@ def preprocessing(in_dir, out_dir="./"):
                             total_valid_samples_app[labels[0]] += 1
                             total_valid_samples_tclass[labels[1]] += 1
                         # Output directory
-                        category_out_dir = os.path.join(out_dir, filename)
+                        category_out_dir = os.path.join(packets_folder, filename)
 
                         # Store raw packets
                         with open(category_out_dir, 'a') as csv_file:
@@ -297,4 +299,4 @@ def preprocessing(in_dir, out_dir="./"):
         text_file.write(json.dumps(total_valid_samples))
 
     end = time.time()
-    print('Extract data took: {}'.format(end - start))
+    print('Extract data took: {} seconds'.format(end - start))

@@ -5,9 +5,11 @@ import numpy as np
 import random
 import time
 
-def down_sample(input_dir, output_dir, task):
-    # todo: generate labels in this step???
-    # todo: downsampling is different depending on the task to be done what is coded right now is the application identification task
+def down_sample(input_dir, output_dir, task=0):
+    if task == 1:
+        # todo: downsampling is different depending on the task to be done what is coded right now is the application identification task, consider also TOR traffic
+        pass
+
     start = time.time()
     os.makedirs(output_dir, exist_ok=True)
 
@@ -24,7 +26,7 @@ def down_sample(input_dir, output_dir, task):
                         if line.startswith('Total valid samples per app:'):
                             result = json.loads(line.rstrip().split('Total valid samples per app:')[1])
                             num_valid_packets = np.asarray(list(result.values()))
-                            minimum = np.min(num_valid_packets[np.nonzero(num_valid_packets)])
+                            minimum_apps = np.min(num_valid_packets[np.nonzero(num_valid_packets)])
             if file.endswith('.csv'):
                 # read the info of the file, load it in memory, [[packet1], [packet2], ...]
                 with open (os.path.join(root, file)) as csv_file:
@@ -33,7 +35,7 @@ def down_sample(input_dir, output_dir, task):
                     for row in csv_reader:
                         packets.append(row)
                 # select a minimum number of random samples (down sampling)
-                random_samples = random.sample(packets, minimum)
+                random_samples = random.sample(packets, minimum_apps)
                 # store them in other directory
                 with open(os.path.join(out_path, file), 'a') as csv_file:
                     csv_writer = csv.writer(csv_file, delimiter=',')
@@ -74,4 +76,4 @@ def down_sample(input_dir, output_dir, task):
                     pass
 
     end = time.time()
-    print('Downsampling data took: {}'.format(end - start))
+    print('Downsampling data took: {} seconds'.format(end - start))

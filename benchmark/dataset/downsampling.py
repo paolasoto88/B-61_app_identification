@@ -114,12 +114,12 @@ def load_in_memory(input_dir):
     app_labels.append('tor')
 
     for root, dirs, files in os.walk(input_dir):
-        for file in files:
-            print('Processing file: {}'.format(file))
+        for app in app_labels:
             packets = []
-            cat = file.split('.')[0].split('_')
-            for app in app_labels:
+            for file in files:
+                cat = file.split('.')[0].split('_')
                 if cat[0] == app:
+                    print('Processing file: {}'.format(file))
                     with open(os.path.join(root, file), 'r') as csv_file:
                         csv_reader = csv.reader(csv_file, delimiter=',')
                         for row in csv_reader:

@@ -86,6 +86,7 @@ def down_sample(input_dir, output_dir, task=0):
     start = time.time()
     # todo: add more generic behavior, for instance, specify how many samples you want in your dataset, if the size is less than the available packages in the dataset, then use data augmentation.
 
+    load_in_memory(os.path.join(input_dir, 'raw_packets'))
     min_num_pkt = group_data(input_dir, output_dir, folder)
 
     for root, directories, files in os.walk(os.path.join(output_dir, folder)):
@@ -106,3 +107,24 @@ def down_sample(input_dir, output_dir, task=0):
                         create_train_dataset_labels(root, random_samples, label)
     end = time.time()
     print('Downsampling data took: {} seconds'.format(end - start))
+
+def load_in_memory(input_dir):
+
+    app_labels = APP_IDENTIFICATION_LABELS
+    app_labels.append('tor')
+
+    for root, dirs, files in os.walk(input_dir):
+        for file in files:
+            print('Processing file: {}'.format(file))
+            packets = []
+            cat = file.split('.')[0].split('_')
+            for app in app_labels:
+                if cat[0] == app:
+                    with open(os.path.join(root, file), 'r') as csv_file:
+                        csv_reader = csv.reader(csv_file, delimiter=',')
+                        for row in csv_reader:
+                            packets.append(row)
+                    print('raw packets successfully loaded for app {}'.format(app))
+
+
+

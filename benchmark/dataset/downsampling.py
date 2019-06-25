@@ -4,7 +4,7 @@ import json
 import numpy as np
 import random
 import time
-from benchmark.const import APP_IDENTIFICATION_LABELS, TOR_TRAFFIC_LABELS, TRAFFIC_CLASES
+from benchmark.const import APP_IDENTIFICATION_LABELS, TOR_TRAFFIC_LABELS, TRAFFIC_CLASES, TRAFFIC_CLASES_LABELS
 
 def create_train_dataset_labels(folder, information, label):
     with open(os.path.join(folder, 'dataset.csv'), 'a') as packets_file, open(
@@ -127,4 +127,33 @@ def load_in_memory(input_dir):
                     print('raw packets successfully loaded for app {}'.format(app))
 
 
+def create_categories(task):
+    if task == 0:
+        categories = APP_IDENTIFICATION_LABELS
+        categories.append('tor')
+    elif task == 1:
+        categories = TRAFFIC_CLASES_LABELS
+        for tclass in TRAFFIC_CLASES_LABELS:
+            categories.append('vpn_'+tclass)
+    elif task == 2:
+        categories = TOR_TRAFFIC_LABELS
+    else:
+        raise NotImplementedError
+    return categories
 
+def down_sample_(input_dir, output_dir, task=0):
+    # create categories to filter
+    categories = create_categories(task)
+
+    for root, directories, files in os.walk(input_dir):
+        for file in files:
+            path_file = os.path.join(root, file)
+            label = file.split('.')[0].split('_')
+            if file == 'results.txt':
+                min_num_pkt = get_min_packets_per_cat(path_file)
+            else:
+                if file.endswith('.csv'):
+                    # todo: modify load_in_memory to accept categories
+                    packets = load_in_memory(root)
+                    random_samples = random.sample(packets, min_num_pkt)
+                    create_train_dataset_labels(root, random_samples, label)

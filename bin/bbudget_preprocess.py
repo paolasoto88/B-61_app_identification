@@ -10,7 +10,7 @@ if __name__ == "__main__":
                         help="Folder with the pcaps to classify")
     parser.add_argument("-o", "--outputdir", dest="outputdir",
                         type=str, required=True,
-                        help="Folder to sve the preprocessed files")
+                        help="Folder to save the preprocessed files")
 
 
     args = parser.parse_args()

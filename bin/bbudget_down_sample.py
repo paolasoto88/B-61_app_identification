@@ -16,8 +16,6 @@ if __name__ == "__main__":
                         help="Select the task to be implemented: 0 for application identification, 1 for traffic classification")
 
 
-
-    # TODO: add more arguments, for example task, app id or traffic classification
     args = parser.parse_args()
     input_dir = args.inputdir
     output_dir = args.outputdir

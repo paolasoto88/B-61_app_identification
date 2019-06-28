@@ -11,11 +11,10 @@ setup(
     description='Traffic Classification package for b-budget projet',
     install_requires=['numpy>=1.14.1',
                       'matplotlib>=2.1.2',
-                      'scikit-image>=0.14.0',
-                      'dpkt',
+                      'scikit-image>=0.14.0', 'progressbar2>=3.38.0', 'dpkt',
                       'keras'],
-    extras_require={"cpu": ['tensorflow==1.10.0'],
-                    "gpu": ['tensorflow-gpu==1.10.0']},
+    extras_require={"cpu": ['tensorflow>=1.10.0'],
+                    "gpu": ['tensorflow-gpu>=1.10.0']},
     scripts=['bin/bbudget_preprocess.py',
-             'bin/bbudget_down_sample.py']
+             'bin/bbudget_down_sample.py', 'bin/bbudget_split.py']
 )

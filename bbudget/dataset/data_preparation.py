@@ -5,7 +5,7 @@ import csv
 import json
 import time
 import numpy as np
-from benchmark.const import TOR_TRAFFIC_LABELS, TRAFFIC_CLASES, APP_IDENTIFICATION_LABELS, TRAFFIC_CLASES_LABELS, \
+from bbudget.const import TOR_TRAFFIC_LABELS, TRAFFIC_CLASES, APP_IDENTIFICATION_LABELS, TRAFFIC_CLASES_LABELS, \
     ETHERNET_TYPES
 
 

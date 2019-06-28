@@ -4,7 +4,7 @@ import json
 import numpy as np
 import random
 import time
-from benchmark.const import APP_IDENTIFICATION_LABELS, TOR_TRAFFIC_LABELS, TRAFFIC_CLASES_LABELS
+from bbudget.const import APP_IDENTIFICATION_LABELS, TOR_TRAFFIC_LABELS, TRAFFIC_CLASES_LABELS
 
 def create_categories(task):
     categories = []

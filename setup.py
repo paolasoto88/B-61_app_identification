@@ -12,6 +12,10 @@ setup(
     install_requires=['numpy>=1.14.1',
                       'matplotlib>=2.1.2',
                       'scikit-image>=0.14.0',
-                      'dpkt'],
-    scripts=['bin/benchmark_prepare.py']
+                      'dpkt',
+                      'keras'],
+    extras_require={"cpu": ['tensorflow==1.10.0'],
+                    "gpu": ['tensorflow-gpu==1.10.0']},
+    scripts=['bin/bbudget_preprocess.py',
+             'bin/bbudget_down_sample.py']
 )

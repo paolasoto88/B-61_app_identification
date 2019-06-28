@@ -1,5 +1,5 @@
 import argparse
-from benchmark.dataset.downsampling import down_sample
+from bbudget.dataset.downsampling import down_sample
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

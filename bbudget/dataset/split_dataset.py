@@ -16,7 +16,10 @@ def read_data(dataset_path, labels_path):
         dataset_reader = csv.reader(dataset_file, delimiter=',')
         labels_reader = csv.reader(labels_file, delimiter=',')
         for row in dataset_reader:
-            packets.append(row)
+            pkt = ''
+            for item in row:
+                pkt = pkt + item + ','
+            packets.append(pkt)
         for row in labels_reader:
             labels.append(row[0])
         info = []
@@ -60,7 +63,7 @@ def copy_split(output_root, folder_name, files_df):
     dst = os.path.join(output_root, folder_name)
     # Create the destination folder if needed
     os.makedirs(dst, exist_ok=True)
-    files_df.to_csv(os.path.join(dst, filename))
+    files_df.to_csv(os.path.join(dst, filename), index=False)
 
 
 def create_datasets(in_dir, out_dir, val_size, test_size, seed):
